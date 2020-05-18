@@ -367,32 +367,19 @@ my $unuseddesc = {
     description => "Reference to unused volumes. This is used internally, and should not be modified manually.",
 };
 
-for (my $i = 0; $i < $MAX_IDE_DISKS; $i++)  {
-    $drivedesc_hash->{"ide$i"} = $idedesc;
-}
+$drivedesc_hash->{"ide$_"} = $idedesc for (0..$MAX_IDE_DISKS);
 
-for (my $i = 0; $i < $MAX_SATA_DISKS; $i++)  {
-    $drivedesc_hash->{"sata$i"} = $satadesc;
-}
+$drivedesc_hash->{"sata$_"} = $satadesc for (0..$MAX_SATA_DISKS);
 
-for (my $i = 0; $i < $MAX_SCSI_DISKS; $i++)  {
-    $drivedesc_hash->{"scsi$i"} = $scsidesc;
-}
+$drivedesc_hash->{"scsi$_"} = $scsidesc for (0..$MAX_SCSI_DISKS);
 
-for (my $i = 0; $i < $MAX_NVME_DISKS; $i++)  {
-    $drivedesc_hash->{"nvme$i"} = $nvmedesc;
-}
+$drivedesc_hash->{"nvme$_"} = $nvmedesc for (0..$MAX_NVME_DISKS);
 
-
-for (my $i = 0; $i < $MAX_VIRTIO_DISKS; $i++)  {
-    $drivedesc_hash->{"virtio$i"} = $virtiodesc;
-}
+$drivedesc_hash->{"virtio$_"} = $virtiodesc for (0..$MAX_VIRTIO_DISKS);
 
 $drivedesc_hash->{efidisk0} = $efidisk_desc;
 
-for (my $i = 0; $i < $MAX_UNUSED_DISKS; $i++) {
-    $drivedesc_hash->{"unused$i"} = $unuseddesc;
-}
+$drivedesc_hash->{"unused$_"} = $unuseddesc for (0..$MAX_UNUSED_DISKS);
 
 sub valid_drive_names {
     # order is important - used to autoselect boot disk
