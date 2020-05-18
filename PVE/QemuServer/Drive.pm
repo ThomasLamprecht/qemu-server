@@ -27,6 +27,7 @@ PVE::JSONSchema::register_standard_option('pve-qm-image-format', {
 
 my $MAX_IDE_DISKS = 4;
 my $MAX_SCSI_DISKS = 31;
+my $MAX_NVME_DISKS = 8;
 my $MAX_VIRTIO_DISKS = 16;
 our $MAX_SATA_DISKS = 6;
 our $MAX_UNUSED_DISKS = 256;
@@ -275,6 +276,20 @@ my $scsidesc = {
 };
 PVE::JSONSchema::register_standard_option("pve-qm-scsi", $scsidesc);
 
+my $nvme_fmt = {
+    %drivedesc_base,
+    %ssd_fmt,
+    %wwn_fmt,
+};
+
+my $nvmedesc = {
+    optional => 1,
+    type => 'string', format => $nvme_fmt,
+    description => "Use volume as NVME disk (n is 0 to " . ($MAX_NVME_DISKS -1) . ").",
+};
+
+PVE::JSONSchema::register_standard_option("pve-qm-nvme", $nvmedesc);
+
 my $sata_fmt = {
     %drivedesc_base,
     %ssd_fmt,
@@ -364,6 +379,11 @@ for (my $i = 0; $i < $MAX_SCSI_DISKS; $i++)  {
     $drivedesc_hash->{"scsi$i"} = $scsidesc;
 }
 
+for (my $i = 0; $i < $MAX_NVME_DISKS; $i++)  {
+    $drivedesc_hash->{"nvme$i"} = $nvmedesc;
+}
+
+
 for (my $i = 0; $i < $MAX_VIRTIO_DISKS; $i++)  {
     $drivedesc_hash->{"virtio$i"} = $virtiodesc;
 }
@@ -380,6 +400,7 @@ sub valid_drive_names {
             (map { "scsi$_" } (0 .. ($MAX_SCSI_DISKS - 1))),
             (map { "virtio$_" } (0 .. ($MAX_VIRTIO_DISKS - 1))),
             (map { "sata$_" } (0 .. ($MAX_SATA_DISKS - 1))),
+            (map { "nvme$_" } (0 .. ($MAX_NVME_DISKS - 1))),
             'efidisk0');
 }
 

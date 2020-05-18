@@ -406,7 +406,7 @@ EODESC
 	optional => 1,
 	type => 'string', format => 'pve-qm-bootdisk',
 	description => "Enable booting from specified disk.",
-	pattern => '(ide|sata|scsi|virtio)\d+',
+	pattern => '(ide|sata|scsi|virtio|nvme)\d+',
     },
     smp => {
 	optional => 1,
@@ -1424,7 +1424,10 @@ sub print_drivedevice_full {
 	    $device .= ",rotation_rate=1";
 	}
 	$device .= ",wwn=$drive->{wwn}" if $drive->{wwn};
-
+    } elsif ($drive->{interface} eq 'nvme') {
+	my $path = $drive->{file};
+	$drive->{serial} //= "$drive->{interface}$drive->{index}"; # serial is mandatory for nvme
+	$device = "nvme,drive=drive-$drive->{interface}$drive->{index},id=$drive->{interface}$drive->{index}";
     } elsif ($drive->{interface} eq 'ide' || $drive->{interface} eq 'sata') {
 	my $maxdev = ($drive->{interface} eq 'sata') ? $PVE::QemuServer::Drive::MAX_SATA_DISKS : 2;
 	my $controller = int($drive->{index} / $maxdev);
@@ -2157,7 +2160,7 @@ sub parse_vm_config {
 	    } else {
 		$key = 'ide2' if $key eq 'cdrom';
 		my $fmt = $confdesc->{$key}->{format};
-		if ($fmt && $fmt =~ /^pve-qm-(?:ide|scsi|virtio|sata)$/) {
+		if ($fmt && $fmt =~ /^pve-qm-(?:ide|scsi|virtio|sata|nvme)$/) {
 		    my $v = parse_drive($key, $value);
 		    if (my $volid = filename_to_volume_id($vmid, $v->{file}, $v->{media})) {
 			$v->{file} = $volid;
@@ -3784,7 +3787,17 @@ sub vm_deviceplug {
 	    warn $@ if $@;
 	    die $err;
         }
+    } elsif ($deviceid =~ m/^(nvme)(\d+)$/) {
 
+	qemu_driveadd($storecfg, $vmid, $device);
+
+	my $devicefull = print_drivedevice_full($storecfg, $conf, $vmid, $device, $arch, $machine_type);
+	eval { qemu_deviceadd($vmid, $devicefull); };
+	if (my $err = $@) {
+	    eval { qemu_drivedel($vmid, $deviceid); };
+	    warn $@ if $@;
+	    die $err;
+        }
     } elsif ($deviceid =~ m/^(net)(\d+)$/) {
 
 	return undef if !qemu_netdevadd($vmid, $conf, $arch, $device, $deviceid);
@@ -3861,6 +3874,10 @@ sub vm_deviceunplug {
         qemu_devicedel($vmid, $deviceid);
         qemu_drivedel($vmid, $deviceid);
 	qemu_deletescsihw($conf, $vmid, $deviceid);
+
+    } elsif ($deviceid =~ m/^(nvme)(\d+)$/) {
+	qemu_devicedel($vmid, $deviceid);
+	qemu_drivedel($vmid, $deviceid);
 
     } elsif ($deviceid =~ m/^(net)(\d+)$/) {
 
